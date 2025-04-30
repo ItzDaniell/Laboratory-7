@@ -61,3 +61,24 @@ class CategoryPostListView(ListView):
         context['tags'] = Tag.objects.annotate(post_count=Count('posts')).order_by('-post_count')[:10]
         context['recent_posts'] = Post.published_objects.recent_posts()
         return context
+    
+class TagPostListView(ListView):
+    """View for listing posts with a specific tag"""
+    model = Post
+    template_name = 'blog/post_list.html'
+    context_object_name = 'posts'
+    paginate_by = 5
+    
+    def get_queryset(self):
+        """Get published posts with a specific tag"""
+        self.tag = get_object_or_404(Tag, slug=self.kwargs['slug'])
+        return Post.published_objects.by_tag(self.tag.slug)
+    
+    def get_context_data(self, **kwargs):
+        """Add additional context data"""
+        context = super().get_context_data(**kwargs)
+        context['tag'] = self.tag
+        context['categories'] = Category.objects.all()
+        context['tags'] = Tag.objects.annotate(post_count=Count('posts')).order_by('-post_count')[:10]
+        context['recent_posts'] = Post.published_objects.recent_posts()
+        return context

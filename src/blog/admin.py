@@ -23,3 +23,14 @@ class PostAdmin(admin.ModelAdmin):
     raw_id_fields = ('author',)
     date_hierarchy = 'published_date'
     filter_horizontal = ('tags',)
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'email', 'post', 'created_date', 'approved')
+    list_filter = ('approved', 'created_date')
+    search_fields = ('name', 'email', 'content')
+    actions = ['approve_comments']
+    
+    def approve_comments(self, request, queryset):
+        queryset.update(approved=True)
+    approve_comments.short_description = "Approve selected comments"

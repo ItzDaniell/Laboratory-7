@@ -41,3 +41,18 @@ class PostManager(models.Manager):
         return self.published().annotate(
             total_comments=Count('comments')
         ).order_by('-total_comments')[:count]
+
+class CommentManager(models.Manager):
+    """Custom manager for Comment model"""
+    
+    def approved(self):
+        """Return only approved comments"""
+        return self.filter(is_approved=True)
+    
+    def for_post(self, post_id):
+        """Return comments for a specific post"""
+        return self.approved().filter(post_id=post_id)
+    
+    def recent_comments(self, count=5):
+        """Return most recent approved comments"""
+        return self.approved().order_by('-created_at')[:count]

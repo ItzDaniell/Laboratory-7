@@ -24,7 +24,8 @@ class Category(models.Model):
     
     def get_absolute_url(self):
         return reverse('blog:category_detail', args=[self.slug])
-    
+
+
 class Tag(models.Model):
     """Tag model for categorizing blog posts"""
     name = models.CharField(max_length=50)
@@ -43,6 +44,7 @@ class Tag(models.Model):
     
     def get_absolute_url(self):
         return reverse('blog:tag_detail', args=[self.slug])
+
 
 class Post(models.Model):
     """Blog post model"""
@@ -84,7 +86,8 @@ class Post(models.Model):
     
     def get_absolute_url(self):
         return reverse('blog:post_detail', args=[self.slug])
-    
+
+
 class Comment(models.Model):
     """Comment model for blog posts"""
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')

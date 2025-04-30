@@ -84,3 +84,20 @@ class Post(models.Model):
     
     def get_absolute_url(self):
         return reverse('blog:post_detail', args=[self.slug])
+    
+class Comment(models.Model):
+    """Comment model for blog posts"""
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_approved = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['created_at']),
+        ]
+    
+    def __str__(self):
+        return f"Comment by {self.author.username} on {self.post.title}"

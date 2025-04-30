@@ -24,3 +24,22 @@ class Category(models.Model):
     
     def get_absolute_url(self):
         return reverse('blog:category_detail', args=[self.slug])
+    
+class Tag(models.Model):
+    """Tag model for categorizing blog posts"""
+    name = models.CharField(max_length=50)
+    slug = models.SlugField(unique=True)
+    
+    class Meta:
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        return reverse('blog:tag_detail', args=[self.slug])

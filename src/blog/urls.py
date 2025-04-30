@@ -15,4 +15,8 @@ urlpatterns = [
     
     # Tag detail page
     path('tag/<slug:slug>/', views.TagPostListView.as_view(), name='tag_detail'),
+
+    # Add comment
+    path('post/<slug:slug>/comment/', views.CommentCreateView.as_view(), name='add_comment'),
+
 ]

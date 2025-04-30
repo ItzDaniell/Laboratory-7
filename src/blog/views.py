@@ -1,84 +1,105 @@
-from django.shortcuts import render, get_object_or_404
-from django.views.generic import ListView, DetailView
-from django.db.models import Count
-from .models import Post, Category, Tag
+from django.db import models
+from django.contrib.auth.models import User
+from django.urls import reverse
+from django.utils.text import slugify
+
+class Category(models.Model):
+    """Category model for organizing blog posts"""
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    description = models.TextField(blank=True)
+    
+    class Meta:
+        verbose_name_plural = "categories"
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        return reverse('blog:category_detail', args=[self.slug])
 
 
-class PostListView(ListView):
-    """View for listing blog posts"""
-    model = Post
-    template_name = 'blog/post_list.html'
-    context_object_name = 'posts'
-    paginate_by = 5
+class Tag(models.Model):
+    """Tag model for categorizing blog posts"""
+    name = models.CharField(max_length=50)
+    slug = models.SlugField(unique=True)
     
-    def get_queryset(self):
-        """Get only published posts"""
-        return Post.published_objects.published()
+    class Meta:
+        ordering = ['name']
     
-    def get_context_data(self, **kwargs):
-        """Add additional context data"""
-        context = super().get_context_data(**kwargs)
-        context['categories'] = Category.objects.all()
-        context['tags'] = Tag.objects.annotate(post_count=Count('posts')).order_by('-post_count')[:10]
-        context['recent_posts'] = Post.published_objects.recent_posts()
-        return context
+    def __str__(self):
+        return self.name
     
-class PostDetailView(DetailView):
-    """View for displaying a single post"""
-    model = Post
-    template_name = 'blog/post_detail.html'
-    context_object_name = 'post'
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
     
-    def get_queryset(self):
-        """Get only published posts"""
-        return Post.published_objects.published()
+    def get_absolute_url(self):
+        return reverse('blog:tag_detail', args=[self.slug])
+
+
+class Post(models.Model):
+    """Blog post model"""
+    STATUS_CHOICES = (
+        ('draft', 'Draft'),
+        ('published', 'Published'),
+    )
     
-    def get_context_data(self, **kwargs):
-        """Add additional context data"""
-        context = super().get_context_data(**kwargs)
-        context['categories'] = Category.objects.all()
-        context['tags'] = Tag.objects.annotate(post_count=Count('posts')).order_by('-post_count')[:10]
-        context['recent_posts'] = Post.published_objects.recent_posts()
-        return context
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True, max_length=200)
+    content = models.TextField()
+    featured_image = models.ImageField(upload_to='posts/', blank=True)
     
-class CategoryPostListView(ListView):
-    """View for listing posts in a specific category"""
-    model = Post
-    template_name = 'blog/post_list.html'
-    context_object_name = 'posts'
-    paginate_by = 5
+    # Time fields
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    published_at = models.DateTimeField(null=True, blank=True)
     
-    def get_queryset(self):
-        """Get published posts for a specific category"""
-        self.category = get_object_or_404(Category, slug=self.kwargs['slug'])
-        return Post.published_objects.by_category(self.category.slug)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='draft')
     
-    def get_context_data(self, **kwargs):
-        """Add additional context data"""
-        context = super().get_context_data(**kwargs)
-        context['category'] = self.category
-        context['categories'] = Category.objects.all()
-        context['tags'] = Tag.objects.annotate(post_count=Count('posts')).order_by('-post_count')[:10]
-        context['recent_posts'] = Post.published_objects.recent_posts()
-        return context
+    # Relationships
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='posts')
+    tags = models.ManyToManyField(Tag, related_name='posts', blank=True)
     
-class TagPostListView(ListView):
-    """View for listing posts with a specific tag"""
-    model = Post
-    template_name = 'blog/post_list.html'
-    context_object_name = 'posts'
-    paginate_by = 5
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['-created_at']),
+        ]
     
-    def get_queryset(self):
-        """Get published posts with a specific tag"""
-        self.tag = get_object_or_404(Tag, slug=self.kwargs['slug'])
-        return Post.published_objects.by_tag(self.tag.slug)
+    def __str__(self):
+        return self.title
     
-    def get_context_data(self, **kwargs):
-        """Add additional context data"""
-        context = super().get_context_data(**kwargs)
-        context['tag'] = self.tag
-        context['categories'] = Category.objects.all()
-        context['tags'] = Tag.objects.annotate(post_count=Count('posts')).order_by('-post_count')[:10]
-        context['recent_posts'] = Post.published_objects.recent_posts()
-        return context
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        return reverse('blog:post_detail', args=[self.slug])
+
+
+class Comment(models.Model):
+    """Comment model for blog posts"""
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_approved = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['created_at']),
+        ]
+    
+    def __str__(self):
+        return f"Comment by {self.author.username} on {self.post.title}"

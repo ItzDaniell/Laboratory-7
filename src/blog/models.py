@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils.text import slugify
+from .managers import PostManager, CommentManager
+
 
 
 class Category(models.Model):
@@ -52,7 +54,8 @@ class Post(models.Model):
         ('draft', 'Draft'),
         ('published', 'Published'),
     )
-    
+    objects = models.Manager()  # Default manager
+    blog_objects = PostManager()
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, max_length=200)
     content = models.TextField()
@@ -90,6 +93,8 @@ class Post(models.Model):
 
 class Comment(models.Model):
     """Comment model for blog posts"""
+    objects = models.Manager()  # Default manager
+    blog_objects = CommentManager()  # Custom manager
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
     content = models.TextField()
